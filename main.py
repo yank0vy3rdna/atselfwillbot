@@ -3,7 +3,10 @@ import os
 from latex.build import build_pdf
 from telebot import apihelper
 import settings
+import logging
 
+FORMAT = '%(asctime)s  -  %(message)s'
+logging.basicConfig(filename="atselfwill.log", level=logging.INFO,format=FORMAT)
 apihelper.proxy = {'https': settings.credentials['proxy']}
 bot = telebot.TeleBot(settings.credentials['api-key'])
 user_dict = {}
@@ -23,7 +26,7 @@ def send_welcome(message):
 ПСЖ бот by yank0vy3rdna
 Привет,
 сейчас я помогу тебе числануться
-Для начала назови свое имя(ФИО в родительном падеже)?
+Ректору Университета ИТМО от студента(напиши ФИО в родительном падеже):
 """)
     bot.register_next_step_handler(msg, process_name_step)
 
@@ -34,7 +37,7 @@ def process_name_step(message):
         name = message.text
         user = User(name)
         user_dict[chat_id] = user
-        msg = bot.reply_to(message, 'Напиши ка теперь свою группу')
+        msg = bot.reply_to(message, 'Обучающимся в группе(напиши свою группу)')
         bot.register_next_step_handler(msg, process_age_step)
     except Exception as e:
         bot.reply_to(message, 'oooops')
@@ -52,20 +55,19 @@ def process_age_step(message):
         o = fio[2]
         fio = f + ' ' + i + ' ' + o
         fio = fio.title()
-        bot.send_message(chat_id, 'Обработка начата, и обратного пути нет..')
+        bot.send_message(chat_id, 'Заполняем бланк')
         try:
             current_dir = os.path.abspath(os.path.dirname(__file__))
             pdf = build_pdf(texTemplate.replace('@GROUP@', user.group).replace('@FIO@', fio),
                             texinputs=[current_dir, ''])
             pdf.save_to('ПСЖ.pdf')
-            bot.send_message(chat_id, 'Поздравляю, ' + user.name.split(' ')[1] +
-                             ', ваш бланк ПСЖ заполнен и скоро будет доставлен')
+            bot.send_message(chat_id, 'Поздравляю твой бланк ПСЖ заполнен')
             doc = open('ПСЖ.pdf', 'rb')
             bot.send_document(chat_id, doc)
-            print(user_dict)
+            logging.info(fio+' ' + user.group)
         except Exception as e:
             # print(e)
-            bot.send_message(chat_id, 'Поздравляю, ' + user.name.split(' ')[1] + ', ваш бланк ПСЖ послал тебя нахуй')
+            bot.send_message(chat_id, 'oooops')
     except Exception as e:
         bot.reply_to(message, 'oooops')
         print(e)
