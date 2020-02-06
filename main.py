@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 import telebot
 import os
-from latex.build import build_pdf
 from telebot import apihelper
 import settings
-import logging
 import datetime
 import sys
 import time
