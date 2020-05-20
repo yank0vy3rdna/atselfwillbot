@@ -1,0 +1,1 @@
+PyTelegramBotAPI==3.7.1

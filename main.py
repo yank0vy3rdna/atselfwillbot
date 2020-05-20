@@ -2,14 +2,12 @@
 import telebot
 import os
 from telebot import apihelper
-import settings
 import datetime
 import sys
 import time
-apihelper.proxy = {'https': settings.credentials['proxy']}
-bot = telebot.TeleBot(settings.credentials['api-key'])
+bot = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 user_dict = {}
-texTemplate = open('/root/atselfwillbot/atselfwill.tex', encoding="utf-8").read()
+texTemplate = open('atselfwill.tex', encoding="utf-8").read()
 import traceback
 
 class User:
@@ -19,7 +17,7 @@ class User:
 
 
 # Handle '/start' and '/help'
-@bot.message_handler(commands=['help', 'start'])
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
     msg = bot.reply_to(message, """\
 ПСЖ бот by yank0vy3rdna
@@ -34,6 +32,8 @@ def process_name_step(message):
     try:
         chat_id = message.chat.id
         name = message.text
+        if '\\' in name:
+            raise Exception('dich')
         user = User(name)
         user_dict[chat_id] = user
         if len(name.split(' ')) != 3:
@@ -41,7 +41,7 @@ def process_name_step(message):
         msg = bot.reply_to(message, 'Обучающимся в группе(напиши свою группу)')
         bot.register_next_step_handler(msg, process_age_step)
     except ValueError:
-        bot.reply_to(message, 'ФИО ЭТО 3 СЛОВА ГЕНИЙ')
+        bot.reply_to(message, 'ФИО это 3 слова')
     except Exception as e:
         bot.reply_to(message, 'oooops')
 
@@ -50,6 +50,8 @@ def process_age_step(message):
     try:
         chat_id = message.chat.id
         group = message.text
+        if '\\' in group:
+            raise Exception('dich')
         user = user_dict[chat_id]
         user.group = group
         if group[0] in ['M','m','М','м']:
@@ -64,20 +66,20 @@ def process_age_step(message):
         try:
             current_dir = os.path.abspath(os.path.dirname(__file__))
             tex = texTemplate.replace('@GROUP@', user.group).replace('@FIO@', fio)
-            os.system('rm /root/atselfwillbot/temp.*')
-            with open('/root/atselfwillbot/temp.tex','w',encoding='utf-8') as f:
+            os.system('rm ПСЖ.*')
+            with open('ПСЖ.tex','w',encoding='utf-8') as f:
                 f.write(tex)
-            os.system('cd /root/atselfwillbot/; ./getpdf.sh')
+            os.system('python3 texliveonfly.py ПСЖ.tex')
             time.sleep(2)
             bot.send_message(chat_id, 'Поздравляю, твой бланк ПСЖ заполнен')
-            doc = open('/root/atselfwillbot/temp.pdf', 'rb')
+            doc = open('ПСЖ.pdf', 'rb')
             bot.send_document(chat_id, doc)
-            print(datetime.datetime.now(),fio,user.group, file=open('/var/log/atselfwill.out.log','a'))
+            print(datetime.datetime.now(),fio,user.group, message.from_user.id, message.from_user.username) 
         except Exception as e:
-            bot.send_message(chat_id,str(e))
+            bot.send_message(chat_id, "ooops")
             traceback.print_exc(file=sys.stderr)
     except Exception as e:
-        bot.reply_to(message, sys.exc_info()[0])
+        bot.reply_to(message, 'oops')
         traceback.print_exc(file=sys.stderr)
 
 bot.enable_save_next_step_handlers(delay=2)
